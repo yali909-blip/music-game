@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音樂認譜大挑戰 - 雲端同步版</title>
+    <title>音樂認譜大挑戰 - 雲端注音版</title>
     <style>
         :root { --primary-color: #3498db; --success-color: #2ecc71; --error-color: #e74c3c; }
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
@@ -22,7 +22,7 @@
 
         /* 按鈕與交互 */
         .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
-        button { padding: 12px; font-size: 18px; cursor: pointer; border: none; border-radius: 8px; background-color: var(--primary-color); color: white; transition: 0.2s; }
+        button { padding: 12px; font-size: 20px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; background-color: var(--primary-color); color: white; transition: 0.2s; }
         button:hover { filter: brightness(1.1); }
         button:active { transform: translateY(2px); }
         input, select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ddd; margin: 5px; }
@@ -39,7 +39,7 @@
 
 <div id="game-container">
     <div id="setup-screen">
-        <h1>🎼 認譜大考驗 (雲端版)</h1>
+        <h1>🎼 認譜大考驗 (注音版)</h1>
         <p>請輸入您的資料開始測驗</p>
         <input type="text" id="player-name" placeholder="請輸入姓名" maxlength="10"><br>
         <label>測驗題數：</label>
@@ -83,13 +83,13 @@
         <div id="feedback"></div>
 
         <div class="btn-grid">
-            <button onclick="handleAnswer('Do')">Do</button>
-            <button onclick="handleAnswer('Re')">Re</button>
-            <button onclick="handleAnswer('Mi')">Mi</button>
-            <button onclick="handleAnswer('Fa')">Fa</button>
-            <button onclick="handleAnswer('Sol')">Sol</button>
-            <button onclick="handleAnswer('La')">La</button>
-            <button onclick="handleAnswer('Si')">Si</button>
+            <button onclick="handleAnswer('ㄉㄛ')">ㄉㄛ</button>
+            <button onclick="handleAnswer('ㄖㄨㄝ')">ㄖㄨㄝ</button>
+            <button onclick="handleAnswer('ㄇ一')">ㄇ一</button>
+            <button onclick="handleAnswer('ㄈㄚ')">ㄈㄚ</button>
+            <button onclick="handleAnswer('ㄙㄛ')">ㄙㄛ</button>
+            <button onclick="handleAnswer('ㄌㄚ')">ㄌㄚ</button>
+            <button onclick="handleAnswer('ㄒ一')">ㄒ一</button>
         </div>
     </div>
 
@@ -108,22 +108,23 @@
 </div>
 
 <script>
-    // 雲端網址
+    // 雲端網址 (已保留你提供的網址)
     const CLOUD_URL = "https://script.google.com/macros/s/AKfycbyyyMyZfrVIvswCfIFpw7dx80Zz1U0usgRhhgLFr1qKU47YB-7_sdcIMU-nFFJe4j_F/exec";
 
+    // 修改題庫名稱為注音
     const notesData = [
-        { name: 'Do', top: 150, freq: 261.6, ledger: true },  // C4
-        { name: 'Re', top: 140, freq: 293.7, ledger: false }, // D4
-        { name: 'Mi', top: 130, freq: 329.6, ledger: false }, // E4
-        { name: 'Fa', top: 120, freq: 349.2, ledger: false }, // F4
-        { name: 'Sol', top: 110, freq: 392.0, ledger: false },// G4
-        { name: 'La', top: 100, freq: 440.0, ledger: false }, // A4
-        { name: 'Si', top: 90, freq: 493.9, ledger: false },  // B4
-        { name: 'Do', top: 80, freq: 523.3, ledger: false },  // C5
-        { name: 'Re', top: 70, freq: 587.3, ledger: false },  // D5
-        { name: 'Mi', top: 60, freq: 659.3, ledger: false },  // E5
-        { name: 'Fa', top: 50, freq: 698.5, ledger: false },  // F5
-        { name: 'Sol', top: 40, freq: 784.0, ledger: false }  // G5
+        { name: 'ㄉㄛ', top: 150, freq: 261.6, ledger: true },  // C4
+        { name: 'ㄖㄨㄝ', top: 140, freq: 293.7, ledger: false }, // D4
+        { name: 'ㄇ一', top: 130, freq: 329.6, ledger: false }, // E4
+        { name: 'ㄈㄚ', top: 120, freq: 349.2, ledger: false }, // F4
+        { name: 'ㄙㄛ', top: 110, freq: 392.0, ledger: false },// G4
+        { name: 'ㄌㄚ', top: 100, freq: 440.0, ledger: false }, // A4
+        { name: 'ㄒ一', top: 90, freq: 493.9, ledger: false },  // B4
+        { name: 'ㄉㄛ', top: 80, freq: 523.3, ledger: false },  // C5
+        { name: 'ㄖㄨㄝ', top: 70, freq: 587.3, ledger: false },  // D5
+        { name: 'ㄇ一', top: 60, freq: 659.3, ledger: false },  // E5
+        { name: 'ㄈㄚ', top: 50, freq: 698.5, ledger: false },  // F5
+        { name: 'ㄙㄛ', top: 40, freq: 784.0, ledger: false }   // G5
     ];
 
     let gameState = {
@@ -226,6 +227,7 @@
             document.getElementById('feedback').innerHTML = "<span style='color:green'>✓ 正確</span>";
             playSound(gameState.currentNote.freq);
         } else {
+            // 答錯時會顯示正確的注音唱名
             document.getElementById('feedback').innerHTML = `<span style='color:red'>✗ 答案是 ${gameState.currentNote.name}</span>`;
         }
         setTimeout(nextQuestion, isCorrect ? 400 : 1200);
