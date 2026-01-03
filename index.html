@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音樂認譜大挑戰 - 雲端同步版</title>
+    <style>
+        :root { --primary-color: #3498db; --success-color: #2ecc71; --error-color: #e74c3c; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #game-container { background: white; width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; }
+        .hidden { display: none; }
+        
+        /* 五線譜繪製 */
+        #staff-outer { position: relative; height: 180px; margin: 25px 0; background: #fff; border: 2px solid #eee; border-radius: 10px; }
+        .line { position: absolute; width: 100%; height: 2px; background-color: #333; }
+        .line-1 { top: 130px; } .line-2 { top: 110px; } .line-3 { top: 90px; } .line-4 { top: 70px; } .line-5 { top: 50px; }
+        .clef { position: absolute; left: 10px; top: 18px; font-size: 110px; line-height: 1; color: #222; z-index: 1; }
+        
+        /* 音符與加線 */
+        .note { position: absolute; width: 30px; height: 22px; background-color: #000; border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; transition: all 0.1s; }
+        .ledger-line { position: absolute; width: 44px; height: 2px; background-color: #333; transform: translate(-50%, -50%); z-index: 5; }
+
+        /* 按鈕與交互 */
+        .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+        button { padding: 12px; font-size: 18px; cursor: pointer; border: none; border-radius: 8px; background-color: var(--primary-color); color: white; transition: 0.2s; }
+        button:hover { filter: brightness(1.1); }
+        button:active { transform: translateY(2px); }
+        input, select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ddd; margin: 5px; }
+        
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #fff; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        .rank-1 { color: #f1c40f; font-weight: bold; }
+        #feedback { height: 30px; margin: 10px 0; font-weight: bold; font-size: 20px; }
+        .timer-text { color: var(--error-color); font-size: 22px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="setup-screen">
+        <h1>🎼 認譜大考驗 (雲端版)</h1>
+        <p>請輸入您的資料開始測驗</p>
+        <input type="text" id="player-name" placeholder="請輸入姓名" maxlength="10"><br>
+        <label>測驗題數：</label>
+        <select id="total-questions">
+            <option value="7">7 題 (每音一次)</option>
+            <option value="10" selected>10 題</option>
+            <option value="14">14 題 (每音兩次)</option>
+            <option value="20">20 題</option>
+        </select><br>
+        <button onclick="startGame()" style="width: 200px; margin-top: 20px; background-color: var(--success-color);">開始挑戰</button>
+        
+        <div style="margin-top: 30px;">
+            <h3>📊 平板本機排行榜</h3>
+            <table id="preview-leaderboard">
+                <thead><tr><th>名次</th><th>姓名</th><th>分數</th><th>時間</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button onclick="clearRecords()" style="font-size: 12px; background: #999; margin-top: 10px;">清除本機紀錄</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            <div style="text-align: left;">
+                <b id="display-name"></b><br>
+                進度：<span id="current-idx">1</span> / <span id="max-idx">10</span>
+            </div>
+            <div class="timer-text" id="timer">10.0s</div>
+        </div>
+
+        <div id="staff-outer">
+            <div class="clef">𝄞</div>
+            <div class="line line-1"></div>
+            <div class="line line-2"></div>
+            <div class="line line-3"></div>
+            <div class="line line-4"></div>
+            <div class="line line-5"></div>
+            <div id="note-layer"></div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="btn-grid">
+            <button onclick="handleAnswer('Do')">Do</button>
+            <button onclick="handleAnswer('Re')">Re</button>
+            <button onclick="handleAnswer('Mi')">Mi</button>
+            <button onclick="handleAnswer('Fa')">Fa</button>
+            <button onclick="handleAnswer('Sol')">Sol</button>
+            <button onclick="handleAnswer('La')">La</button>
+            <button onclick="handleAnswer('Si')">Si</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h2 id="result-title">測驗完成！</h2>
+        <div id="personal-score" style="font-size: 24px; margin-bottom: 5px;"></div>
+        <div id="sync-status" style="font-size: 14px; color: #888; margin-bottom: 20px;">正在同步分數到雲端...</div>
+        <hr>
+        <h3>🏆 本機 Top 10</h3>
+        <table id="final-leaderboard">
+            <thead><tr><th>名次</th><th>姓名</th><th>分數</th><th>秒數</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <button onclick="location.reload()" style="margin-top: 20px; width: 100%;">回到主選單 / 換人作答</button>
+    </div>
+</div>
+
+<script>
+    // 雲端網址
+    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbyyyMyZfrVIvswCfIFpw7dx80Zz1U0usgRhhgLFr1qKU47YB-7_sdcIMU-nFFJe4j_F/exec";
+
+    const notesData = [
+        { name: 'Do', top: 150, freq: 261.6, ledger: true },  // C4
+        { name: 'Re', top: 140, freq: 293.7, ledger: false }, // D4
+        { name: 'Mi', top: 130, freq: 329.6, ledger: false }, // E4
+        { name: 'Fa', top: 120, freq: 349.2, ledger: false }, // F4
+        { name: 'Sol', top: 110, freq: 392.0, ledger: false },// G4
+        { name: 'La', top: 100, freq: 440.0, ledger: false }, // A4
+        { name: 'Si', top: 90, freq: 493.9, ledger: false },  // B4
+        { name: 'Do', top: 80, freq: 523.3, ledger: false },  // C5
+        { name: 'Re', top: 70, freq: 587.3, ledger: false },  // D5
+        { name: 'Mi', top: 60, freq: 659.3, ledger: false },  // E5
+        { name: 'Fa', top: 50, freq: 698.5, ledger: false },  // F5
+        { name: 'Sol', top: 40, freq: 784.0, ledger: false }  // G5
+    ];
+
+    let gameState = {
+        name: "", totalQ: 10, currentIdx: 0, score: 0, totalTime: 0,
+        questionPool: [], currentNote: null, timer: 10, interval: null, startTime: null
+    };
+
+    let audioCtx = null;
+
+    window.onload = () => { updateLeaderboardUI('preview-leaderboard'); };
+
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+    function playSound(freq) {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+    }
+
+    function createQuestionPool(count) {
+        let pool = [];
+        while (pool.length < count) {
+            let shuffleNotes = [...notesData].sort(() => Math.random() - 0.5);
+            pool = pool.concat(shuffleNotes);
+        }
+        return pool.slice(0, count);
+    }
+
+    function startGame() {
+        const name = document.getElementById('player-name').value.trim();
+        if (!name) return alert("請輸入姓名");
+        gameState.name = name;
+        gameState.totalQ = parseInt(document.getElementById('total-questions').value);
+        gameState.questionPool = createQuestionPool(gameState.totalQ);
+        gameState.currentIdx = 0;
+        gameState.score = 0;
+        gameState.totalTime = 0;
+        document.getElementById('display-name').innerText = name;
+        document.getElementById('max-idx').innerText = gameState.totalQ;
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        if (gameState.currentIdx >= gameState.totalQ) return endGame();
+        gameState.currentNote = gameState.questionPool[gameState.currentIdx];
+        gameState.currentIdx++;
+        document.getElementById('current-idx').innerText = gameState.currentIdx;
+        document.getElementById('feedback').innerText = "";
+        renderNote(gameState.currentNote);
+        playSound(gameState.currentNote.freq);
+        startCountdown();
+    }
+
+    function renderNote(note) {
+        const layer = document.getElementById('note-layer');
+        layer.innerHTML = '';
+        const noteEl = document.createElement('div');
+        noteEl.className = 'note';
+        noteEl.style.top = note.top + 'px';
+        noteEl.style.left = '55%';
+        if (note.ledger) {
+            const line = document.createElement('div');
+            line.className = 'ledger-line';
+            line.style.top = note.top + 'px';
+            line.style.left = '55%';
+            layer.appendChild(line);
+        }
+        layer.appendChild(noteEl);
+    }
+
+    function startCountdown() {
+        clearInterval(gameState.interval);
+        gameState.timer = 10.0;
+        gameState.startTime = Date.now();
+        const display = document.getElementById('timer');
+        gameState.interval = setInterval(() => {
+            gameState.timer -= 0.1;
+            display.innerText = gameState.timer.toFixed(1) + "s";
+            if (gameState.timer <= 0) { display.innerText = "0.0s"; handleAnswer(null); }
+        }, 100);
+    }
+
+    function handleAnswer(answer) {
+        clearInterval(gameState.interval);
+        const duration = (Date.now() - gameState.startTime) / 1000;
+        gameState.totalTime += duration;
+        const isCorrect = (answer === gameState.currentNote.name);
+        if (isCorrect) {
+            gameState.score++;
+            document.getElementById('feedback').innerHTML = "<span style='color:green'>✓ 正確</span>";
+            playSound(gameState.currentNote.freq);
+        } else {
+            document.getElementById('feedback').innerHTML = `<span style='color:red'>✗ 答案是 ${gameState.currentNote.name}</span>`;
+        }
+        setTimeout(nextQuestion, isCorrect ? 400 : 1200);
+    }
+
+    async function endGame() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+
+        const finalScore = Math.round((gameState.score / gameState.totalQ) * 100);
+        const timeUsed = gameState.totalTime.toFixed(1);
+        
+        document.getElementById('personal-score').innerHTML = `得分：<b>${finalScore}</b> (總耗時 ${timeUsed}秒)`;
+
+        // --- 雲端同步邏輯 ---
+        const studentData = { name: gameState.name, score: finalScore, time: timeUsed };
+        try {
+            await fetch(CLOUD_URL, {
+                method: "POST",
+                body: JSON.stringify(studentData),
+                mode: 'no-cors'
+            });
+            document.getElementById('sync-status').innerText = "✅ 已成功同步至老師的雲端試算表";
+        } catch (e) {
+            document.getElementById('sync-status').innerText = "❌ 雲端同步失敗，請檢查網路";
+        }
+
+        saveRecord(gameState.name, finalScore, timeUsed);
+        updateLeaderboardUI('final-leaderboard');
+    }
+
+    function saveRecord(name, score, time) {
+        let records = JSON.parse(localStorage.getItem('note_game_records') || "[]");
+        records.push({ name, score, time: parseFloat(time) });
+        records.sort((a, b) => b.score - a.score || a.time - b.time);
+        localStorage.setItem('note_game_records', JSON.stringify(records.slice(0, 50)));
+    }
+
+    function updateLeaderboardUI(tableId) {
+        const records = JSON.parse(localStorage.getItem('note_game_records') || "[]");
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        if(!tbody) return;
+        tbody.innerHTML = records.slice(0, 10).map((r, i) => `
+            <tr class="${i === 0 ? 'rank-1' : ''}">
+                <td>${i + 1}</td>
+                <td>${r.name}</td>
+                <td>${r.score}</td>
+                <td>${r.time}s</td>
+            </tr>
+        `).join('');
+    }
+
+    function clearRecords() {
+        if (confirm("確定要清除本機紀錄嗎？")) {
+            localStorage.removeItem('note_game_records');
+            updateLeaderboardUI('preview-leaderboard');
+        }
+    }
+</script>
+</body>
+</html>
